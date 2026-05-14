@@ -3,3 +3,4 @@ fastapi
 uvicorn
 httpx
 huggingface_hub
+boto3
