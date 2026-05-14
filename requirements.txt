@@ -1,4 +1,4 @@
-vllm
+vllm==0.5.4
 fastapi
 uvicorn
 httpx
