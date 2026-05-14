@@ -23,6 +23,7 @@ class ExtractRequest(BaseModel):
     prompt: Optional[str] = None
 
 VLLM_ENDPOINT = "http://localhost:8000/v1/chat/completions"
+MODEL_NAME = "datalab-to/chandra-ocr-1"
 
 DEFAULT_PROMPT = "Extract all information from this invoice and return it as JSON."
 
@@ -61,7 +62,7 @@ async def extract(request: ExtractRequest):
     # 3. Build vLLM payload
     prompt_text = request.prompt if request.prompt else DEFAULT_PROMPT
     payload = {
-        "model": "datalab-to/chandra-ocr-2",
+        "model": MODEL_NAME,
         "messages": [
             {
                 "role": "user",
