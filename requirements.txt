@@ -1,0 +1,5 @@
+vllm
+fastapi
+uvicorn
+httpx
+huggingface_hub
