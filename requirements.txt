@@ -1,8 +1,9 @@
-pyairports==0.0.1
-pycountry==22.3.5
-vllm==0.6.4
+transformers
+accelerate
+torch
+qwen-vl-utils
+pillow
 fastapi
 uvicorn
-httpx
-huggingface_hub
 boto3
+huggingface_hub
