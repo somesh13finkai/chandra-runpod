@@ -1,4 +1,3 @@
-import json
 import base64
 import mimetypes
 import os
@@ -11,7 +10,7 @@ from urllib.parse import urlparse
 
 app = FastAPI(title="Serverless GPU API")
 
-# S3 client - credentials are injected via RunPod environment variables
+# S3 client - credentials injected via RunPod environment variables
 s3_client = boto3.client(
     "s3",
     aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
@@ -25,9 +24,7 @@ class ExtractRequest(BaseModel):
 
 VLLM_ENDPOINT = "http://localhost:8000/v1/chat/completions"
 
-DEFAULT_PROMPT = """Extract the key information from this invoice and return it as strict JSON.
-The JSON should contain fields such as invoice_number, date, total_amount, vendor_name, and line_items.
-Ensure that the output is only valid JSON, without any markdown formatting or additional text."""
+DEFAULT_PROMPT = "Extract all information from this invoice and return it as JSON."
 
 
 def download_from_s3(s3_url: str) -> tuple[bytes, str]:
@@ -45,24 +42,11 @@ def download_from_s3(s3_url: str) -> tuple[bytes, str]:
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Failed to download from S3: {str(e)}")
 
-    # Detect MIME type from file extension
     mime_type, _ = mimetypes.guess_type(key)
     if mime_type is None:
         mime_type = "application/octet-stream"
 
     return file_bytes, mime_type
-
-
-def parse_vllm_response(content: str) -> dict:
-    """Attempts to parse JSON from the model response, stripping any markdown wrappers."""
-    clean = content.strip()
-    if clean.startswith("```json"):
-        clean = clean[7:]
-    if clean.startswith("```"):
-        clean = clean[3:]
-    if clean.endswith("```"):
-        clean = clean[:-3]
-    return json.loads(clean.strip())
 
 
 @app.post("/extract")
@@ -93,7 +77,7 @@ async def extract(request: ExtractRequest):
         "temperature": 0.0,
     }
 
-    # 4. Forward to vLLM
+    # 4. Forward to vLLM and return raw response as-is
     try:
         async with httpx.AsyncClient(timeout=300.0) as client:
             response = await client.post(VLLM_ENDPOINT, json=payload)
@@ -104,14 +88,9 @@ async def extract(request: ExtractRequest):
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=502, detail=f"vLLM engine error: {e.response.text}")
 
-    # 5. Parse and return JSON output
-    try:
-        content = response_data["choices"][0]["message"]["content"]
-        return parse_vllm_response(content)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="vLLM returned invalid JSON structure")
-    except (KeyError, IndexError) as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected vLLM response format: {str(e)}")
+    # 5. Return the raw model output — no parsing, no modification
+    raw_content = response_data["choices"][0]["message"]["content"]
+    return {"output": raw_content}
 
 
 if __name__ == "__main__":

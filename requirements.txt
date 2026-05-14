@@ -1,3 +1,5 @@
+pyairports==0.0.1
+pycountry==22.3.5
 vllm==0.5.4
 fastapi
 uvicorn
